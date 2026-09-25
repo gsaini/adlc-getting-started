@@ -5,7 +5,7 @@
 
 ## 2. Single-shot flow (test-first)
 
-- [ ] 2.1 Add failing tests for "Write-path failure is not retried" (exactly one `POST /groups`, no expense or balance calls, `ok: false`) and "Read-only mode stops after health" (two `GET /health` calls, nothing else, `ok: true`) against `runSmoke` with a fake `call`. Verify they fail.
+- [x] 2.1 Add failing tests for "Write-path failure is not retried" (exactly one `POST /groups`, no expense or balance calls, `ok: false`) and "Read-only mode stops after health" (two `GET /health` calls, nothing else, `ok: true`) against `runSmoke` with a fake `call`. Verify they fail.
 - [ ] 2.2 Implement `runSmoke` by moving the existing flow out of `smoke.mjs`, with the checks unchanged. Verify the 2.1 tests pass.
 
 ## 3. Wire into the smoke script

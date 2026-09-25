@@ -1,6 +1,11 @@
 // Change smoke-health-retry — spec: deploy-smoke-check.
 import { describe, expect, it } from "vitest";
-import { HealthCheckError, type HttpResult, waitForHealthy } from "../scripts/lib/smoke.mjs";
+import {
+	HealthCheckError,
+	type HttpResult,
+	runSmoke,
+	waitForHealthy,
+} from "../scripts/lib/smoke.mjs";
 
 const OK: HttpResult = { status: 200, json: { status: "ok" } };
 
@@ -133,5 +138,103 @@ describe("waitForHealthy", () => {
 		// Attempt 9 starts at 27.5 s with 2.5 s left; attempt 10 starts at the deadline
 		// and gets the 1 s floor, so the whole check ends by about 31 s.
 		expect(timeouts).toEqual([5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 2500, 1000]);
+	});
+});
+
+const BASE = "https://split-staging.example.workers.dev";
+
+/** A fake API: answers from a route table and records every request made. */
+function fakeApi(routes: Record<string, Array<HttpResult | Error>>) {
+	const requests: string[] = [];
+	const served: Record<string, number> = {};
+	const call = async (method: string, path: string): Promise<HttpResult> => {
+		const key = `${method} ${path.replace(/^\/groups\/[^/]+/, "/groups/:id")}`;
+		requests.push(key);
+		const answers = routes[key];
+		if (!answers) throw new Error(`unexpected request ${key}`);
+		const n = served[key] ?? 0;
+		served[key] = n + 1;
+		const answer = answers[Math.min(n, answers.length - 1)] as HttpResult | Error;
+		if (answer instanceof Error) throw answer;
+		return answer;
+	};
+	return { call, requests };
+}
+
+const HAPPY: Record<string, HttpResult[]> = {
+	"GET /health": [OK],
+	"POST /groups": [{ status: 201, json: { id: "g1" } }],
+	"POST /groups/:id/expenses": [
+		{ status: 201, json: { shares: [{ cents: 334 }, { cents: 333 }, { cents: 333 }] } },
+	],
+	"GET /groups/:id/balances": [
+		{
+			status: 200,
+			json: { balances: [{ netCents: 666 }, { netCents: -333 }, { netCents: -333 }] },
+		},
+	],
+};
+
+describe("runSmoke", () => {
+	it("runs the full flow once when everything is healthy", async () => {
+		const clock = fakeClock();
+		const api = fakeApi(HAPPY);
+
+		await expect(
+			runSmoke({ base: BASE, readOnly: false, call: api.call, ...clock }),
+		).resolves.toEqual({
+			ok: true,
+		});
+		expect(api.requests).toEqual([
+			"GET /health",
+			"POST /groups",
+			"POST /groups/:id/expenses",
+			"GET /groups/:id/balances",
+		]);
+	});
+
+	it("Write-path failure is not retried", async () => {
+		const clock = fakeClock();
+		const api = fakeApi({ ...HAPPY, "POST /groups": [{ status: 500, json: null }] });
+
+		const result = await runSmoke({ base: BASE, readOnly: false, call: api.call, ...clock });
+		expect(result.ok).toBe(false);
+		expect(api.requests).toEqual(["GET /health", "POST /groups"]);
+	});
+
+	it("Read-only mode stops after health", async () => {
+		const clock = fakeClock();
+		const api = fakeApi({ "GET /health": [{ status: 404, json: null }, OK] });
+
+		await expect(
+			runSmoke({ base: BASE, readOnly: true, call: api.call, ...clock }),
+		).resolves.toEqual({
+			ok: true,
+		});
+		expect(api.requests).toEqual(["GET /health", "GET /health"]);
+	});
+
+	it("Health never becomes ready: reports the URL, last status, and body", async () => {
+		const clock = fakeClock();
+		const api = fakeApi({ "GET /health": [{ status: 503, json: { error: "down" } }] });
+
+		const result = await runSmoke({ base: BASE, readOnly: true, call: api.call, ...clock });
+		expect(result.ok).toBe(false);
+		const message = result.ok ? "" : result.message;
+		expect(message).toContain(BASE);
+		expect(message).toContain("status 503");
+		expect(message).toContain('{"error":"down"}');
+		expect(api.requests).toHaveLength(10);
+	});
+
+	it("Network errors throughout: reports the URL and the last error", async () => {
+		const clock = fakeClock();
+		const api = fakeApi({ "GET /health": [new TypeError("fetch failed")] });
+
+		const result = await runSmoke({ base: BASE, readOnly: true, call: api.call, ...clock });
+		expect(result.ok).toBe(false);
+		const message = result.ok ? "" : result.message;
+		expect(message).toContain(BASE);
+		expect(message).toContain("error fetch failed");
 	});
 });
