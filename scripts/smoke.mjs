@@ -6,21 +6,15 @@
 // Creates one throwaway group, so point it only at dev, tunnel, or staging data.
 // Add --read-only (as production does) to check health without writing anything.
 // /health is retried for up to ~30 s, since a first deploy to workers.dev can 404 briefly.
-import { runSmoke } from "./lib/smoke.mjs";
+import { parseBase, runSmoke } from "./lib/smoke.mjs";
 
-const arg = process.argv[2] ?? "http://localhost:8787";
+const parsed = parseBase(process.argv[2] ?? "http://localhost:8787");
 const readOnly = process.argv.includes("--read-only");
-
-// A bad URL is a config mistake, not a slow deploy: fail before any request or wait.
-let url;
-try {
-	url = new URL(arg);
-} catch {}
-if (url?.protocol !== "http:" && url?.protocol !== "https:") {
-	console.error(`✗ Invalid base URL: ${JSON.stringify(arg)}`);
+if (!parsed.ok) {
+	console.error(parsed.message);
 	process.exit(1);
 }
-const base = arg.replace(/\/$/, "");
+const { base } = parsed;
 
 async function call(method, path, body, timeoutMs) {
 	const res = await fetch(`${base}${path}`, {

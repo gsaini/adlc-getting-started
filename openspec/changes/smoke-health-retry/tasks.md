@@ -15,6 +15,6 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Run `pnpm verify` (typecheck, lint, tests with coverage, `openspec validate`) and verify it passes.
-- [ ] 4.2 Independent review: run the `code-reviewer` subagent against this change's scenarios and resolve its findings.
-- [ ] 4.3 Security review: run the `security-reviewer` subagent and resolve its findings.
+- [x] 4.1 Run `pnpm verify` (typecheck, lint, tests with coverage, `openspec validate`) and verify it passes.
+- [x] 4.2 Independent review: run the `code-reviewer` subagent against this change's scenarios and resolve its findings.
+- [x] 4.3 Security review: run the `security-reviewer` subagent and resolve its findings.

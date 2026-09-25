@@ -15,10 +15,36 @@ export class HealthCheckError extends Error {
 	}
 }
 
+// Response bodies go into CI logs; a wrong URL could return anything, so cap them.
+const MAX_BODY_CHARS = 500;
+
 const isHealthy = (res) => res.status === 200 && res.json?.status === "ok";
 
 function describe(last) {
-	return "error" in last ? `error ${last.error.message}` : `status ${last.status}`;
+	if (!("error" in last)) return `status ${last.status}`;
+	return `error ${last.error?.message ?? String(last.error)}`;
+}
+
+function clip(value) {
+	const text = JSON.stringify(value) ?? String(value);
+	return text.length > MAX_BODY_CHARS ? `${text.slice(0, MAX_BODY_CHARS)}…(truncated)` : text;
+}
+
+// A bad URL is a config mistake, not a slow deploy: reject it before any request or wait.
+// Credentials would be echoed into logs, and a query or fragment would swallow the path.
+export function parseBase(arg) {
+	let url;
+	try {
+		url = new URL(arg);
+	} catch {}
+	if (url?.username || url?.password) {
+		return { ok: false, message: "✗ Invalid base URL: credentials are not allowed" };
+	}
+	const httpish = url?.protocol === "http:" || url?.protocol === "https:";
+	if (!httpish || url.search || url.hash) {
+		return { ok: false, message: `✗ Invalid base URL: ${JSON.stringify(arg)}` };
+	}
+	return { ok: true, base: `${url.origin}${url.pathname}`.replace(/\/$/, "") };
 }
 
 // A new workers.dev address can return 404 for a few seconds after its first
@@ -55,14 +81,14 @@ export async function waitForHealthy({
 
 function healthFailure(base, error) {
 	const { last, attempts } = error;
-	const seen = "error" in last ? describe(last) : `${describe(last)} ${JSON.stringify(last.json)}`;
+	const seen = "error" in last ? describe(last) : `${describe(last)} ${clip(last.json)}`;
 	return `✗ GET /health → 200 at ${base}: gave up after ${attempts} attempts, last saw ${seen}`;
 }
 
 // Only /health retries. Every later check runs once, so a real regression fails fast
 // and a flaky write never creates duplicate throwaway groups.
 export async function runSmoke({ base, readOnly, call, sleep, now, log }) {
-	const fail = (label, detail) => ({ ok: false, message: `✗ ${label} ${JSON.stringify(detail)}` });
+	const fail = (label, detail) => ({ ok: false, message: `✗ ${label} ${clip(detail)}` });
 
 	try {
 		await waitForHealthy({

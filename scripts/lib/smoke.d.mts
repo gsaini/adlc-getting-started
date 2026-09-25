@@ -32,9 +32,13 @@ export interface WaitOptions extends Clock {
 export type LastObservation = HttpResult | { error: Error };
 
 export class HealthCheckError extends Error {
+	constructor(last: LastObservation, attempts: number);
 	readonly last: LastObservation;
 	readonly attempts: number;
 }
+
+/** Accepts only plain http(s) URLs: no credentials, query, or fragment. Drops a trailing slash. */
+export function parseBase(arg: string): { ok: true; base: string } | { ok: false; message: string };
 
 /** Resolves with the first healthy response; rejects with HealthCheckError at the deadline. */
 export function waitForHealthy(options: WaitOptions): Promise<HttpResult>;

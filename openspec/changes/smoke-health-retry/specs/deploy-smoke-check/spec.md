@@ -8,8 +8,9 @@ The post-deploy smoke check that CI runs against staging (full flow) and product
 The smoke check SHALL retry `GET /health` until it returns HTTP 200 with a JSON body whose `status` is `"ok"`, or until 30 seconds have passed since the first attempt, whichever comes first.
 - A non-200 status, a 200 whose body is not `{"status":"ok"}`, a network error, and an attempt that times out each count as not healthy yet.
 - Each attempt SHALL be aborted after 5 seconds, or at the 30-second deadline if that comes sooner. The final attempt, made at the deadline, SHALL get 1 second, so the whole check ends within about 31 seconds plus normal process overhead.
-- The waits between attempts SHALL be 500, 1000, 2000, 4000 ms, then 5000 ms each after that. A wait that would pass the deadline is cut short to end at the deadline, and one final attempt is made there.
+- The waits between attempts SHALL be 500, 1000, 2000, 4000 ms, then 5000 ms each after that. A wait that would pass the deadline is cut short to end at the deadline, and one final attempt is made there. An attempt that itself runs until the deadline or past it (for example, one aborted by its timeout) is the final attempt, and no further attempt is made.
 - Each failed attempt SHALL log one line to stdout: `health attempt <n>: <observation>, retrying in <ms> ms`. `<observation>` is `status <code>` for an HTTP response, or `error <message>` for a network error or timeout.
+- Any response body written to stderr SHALL be cut to 500 characters, followed by `…(truncated)`.
 
 #### Scenario: Health is ready on the first attempt
 - **WHEN** `GET /health` returns 200 `{"status":"ok"}` on the first request
@@ -40,8 +41,16 @@ The smoke check SHALL retry `GET /health` until it returns HTTP 200 with a JSON 
 - **THEN** after the attempt at 30 seconds the smoke check writes a line to stderr containing the base URL and the last error message, then exits with code 1
 
 #### Scenario: Invalid base URL fails immediately
-- **WHEN** the smoke check is given an empty or unparseable base URL
-- **THEN** it writes an error naming the bad URL to stderr and exits with code 1 without making any request or waiting
+- **WHEN** the smoke check is given a base URL that is empty, unparseable, not `http`/`https`, or has a query string or fragment
+- **THEN** it writes `✗ Invalid base URL: <the URL as JSON>` to stderr and exits with code 1 without making any request or waiting
+
+#### Scenario: Base URL with credentials is rejected without echoing them
+- **WHEN** the smoke check is given a base URL containing a username or password
+- **THEN** it writes `✗ Invalid base URL: credentials are not allowed` to stderr, without the credentials, and exits with code 1 without making any request
+
+#### Scenario: Long response body is cut in the failure message
+- **WHEN** health never becomes ready and the last response body serializes to more than 500 characters
+- **THEN** the stderr line contains the first 500 characters of the body followed by `…(truncated)`
 
 ### Requirement: Checks after health are single-shot
 Once the health check has passed, the smoke check SHALL make every other request exactly once and fail at once on an unexpected response, in both full-flow and `--read-only` modes.

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	HealthCheckError,
 	type HttpResult,
+	parseBase,
 	runSmoke,
 	waitForHealthy,
 } from "../scripts/lib/smoke.mjs";
@@ -139,6 +140,57 @@ describe("waitForHealthy", () => {
 		// and gets the 1 s floor, so the whole check ends by about 31 s.
 		expect(timeouts).toEqual([5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 2500, 1000]);
 	});
+
+	it("treats an attempt that runs into the deadline as the final attempt", async () => {
+		const clock = fakeClock();
+		const steps: Array<HttpResult | "hang"> = Array(8).fill({ status: 503, json: null });
+		const { probe, startedAt } = scriptedProbe(clock, [...steps, "hang"], OK);
+
+		const failure = await waitForHealthy({ probe, ...clock }).catch((e: unknown) => e);
+		// Attempt 9 starts at 27.5 s and uses its whole 2.5 s budget, ending at the deadline.
+		expect(startedAt).toHaveLength(9);
+		expect((failure as HealthCheckError).attempts).toBe(9);
+	});
+
+	it("logs a thrown value that is not an Error", async () => {
+		const clock = fakeClock();
+		const probe = async (): Promise<HttpResult> => {
+			if (clock.now() === 0) throw "socket closed";
+			return OK;
+		};
+
+		await expect(waitForHealthy({ probe, ...clock })).resolves.toEqual(OK);
+		expect(clock.lines).toEqual(["health attempt 1: error socket closed, retrying in 500 ms"]);
+	});
+});
+
+describe("parseBase", () => {
+	it.each([
+		"",
+		"not a url",
+		"localhost:8787",
+		"ftp://example.com",
+		"https://example.com?x=1",
+		"https://example.com/#top",
+	])("Invalid base URL fails immediately: %j", (arg) => {
+		const result = parseBase(arg);
+		expect(result.ok).toBe(false);
+		expect(result.ok ? "" : result.message).toContain(`Invalid base URL: ${JSON.stringify(arg)}`);
+	});
+
+	it("rejects credentials in the URL without echoing them", () => {
+		const result = parseBase("https://user:s3cret@example.com");
+		expect(result.ok).toBe(false);
+		expect(result.ok ? "" : result.message).not.toContain("s3cret");
+	});
+
+	it("accepts http(s) URLs and drops a trailing slash", () => {
+		expect(parseBase("http://localhost:8787")).toEqual({ ok: true, base: "http://localhost:8787" });
+		expect(parseBase("https://split.example.workers.dev/")).toEqual({
+			ok: true,
+			base: "https://split.example.workers.dev",
+		});
+	});
 });
 
 const BASE = "https://split-staging.example.workers.dev";
@@ -236,5 +288,15 @@ describe("runSmoke", () => {
 		const message = result.ok ? "" : result.message;
 		expect(message).toContain(BASE);
 		expect(message).toContain("error fetch failed");
+	});
+
+	it("cuts a long response body in the failure message", async () => {
+		const clock = fakeClock();
+		const api = fakeApi({ "GET /health": [{ status: 404, json: { page: "x".repeat(5000) } }] });
+
+		const result = await runSmoke({ base: BASE, readOnly: true, call: api.call, ...clock });
+		const message = result.ok ? "" : result.message;
+		expect(message).toContain("…(truncated)");
+		expect(message.length).toBeLessThan(800);
 	});
 });
