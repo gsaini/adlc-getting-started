@@ -3,6 +3,8 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches: [main] # keeps the status badge meaningful for main
   workflow_call: # reused by deploy.yml, so main is verified before every release
 
 permissions:
