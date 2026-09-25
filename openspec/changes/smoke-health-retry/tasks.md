@@ -11,7 +11,7 @@
 ## 3. Wire into the smoke script
 
 - [x] 3.1 Rewrite `scripts/smoke.mjs` as a thin wrapper. It validates the base URL with `new URL()` and exits 1 at once if it's invalid ("Invalid base URL fails immediately"). It wires in real `fetch`, `AbortSignal.timeout`, `setTimeout` and `Date.now`. It catches the health failure and prints the base URL plus the last status and body, or the last error, to stderr, then exits 1. It exits 0 or 1 from `runSmoke`'s result. Verify with `pnpm dev` + `pnpm smoke` (full flow) and `pnpm smoke http://localhost:8787 --read-only`, which both exit 0, and `node scripts/smoke.mjs "" --read-only`, which exits 1 at once with no request.
-- [ ] 3.2 Check the failure path by hand: `node scripts/smoke.mjs http://localhost:9 --read-only` logs attempts 1–9 with the specified retry lines, and exits 1 about 30 s after starting, with a stderr line naming the URL and the last error.
+- [x] 3.2 Check the failure path by hand: `node scripts/smoke.mjs http://localhost:9 --read-only` logs attempts 1–9 with the specified retry lines, and exits 1 about 30 s after starting, with a stderr line naming the URL and the last error.
 
 ## 4. Verification
 
