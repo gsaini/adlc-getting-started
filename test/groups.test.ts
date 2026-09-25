@@ -17,6 +17,7 @@ describe("Create a group", () => {
 		expect(res.json?.id).toEqual(expect.any(String));
 		expect(res.json?.id).not.toBe("");
 		expect(res.json?.createdAt).toMatch(ISO_8601);
+		expect(Object.keys(res.json ?? {}).sort()).toEqual(["createdAt", "id", "members", "name"]);
 	});
 
 	it("keeps members trimmed and in the order given", async () => {
@@ -43,6 +44,7 @@ describe("Create a group", () => {
 	it("Duplicate member names", async () => {
 		const res = await api("POST", "/groups", { name: "x", members: ["Ben", " ben ", "Asha"] });
 		expect(res.status).toBe(400);
+		expect(res.json).toMatchObject({ title: "Validation failed", status: 400 });
 		expect(problemPaths(res.json)).toContain("members");
 		expect(await countGroups()).toBe(0);
 	});
@@ -55,8 +57,17 @@ describe("Create a group", () => {
 	])("Blank or overlong names: %s", async (_label, body, path) => {
 		const res = await api("POST", "/groups", body);
 		expect(res.status).toBe(400);
+		expect(res.json).toMatchObject({ title: "Validation failed", status: 400 });
 		expect(problemPaths(res.json)).toContain(path);
 		expect(await countGroups()).toBe(0);
+	});
+
+	it("treats the same name in composed and decomposed Unicode as a duplicate", async () => {
+		const composed = "Jos\u00e9"; // é as one code point
+		const decomposed = "Jose\u0301"; // e + combining acute accent
+		const res = await api("POST", "/groups", { name: "x", members: [composed, decomposed] });
+		expect(res.status).toBe(400);
+		expect(problemPaths(res.json)).toContain("members");
 	});
 
 	it("accepts an 80-character name and 40-character members", async () => {

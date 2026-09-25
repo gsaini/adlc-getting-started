@@ -2,11 +2,20 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { z } from "zod";
 import { PROBLEMS, problem } from "./problems";
-import { balances, findGroup, insertExpense, insertGroup, listExpenses } from "./repo";
-import { createExpenseSchema, createGroupSchema, fieldErrors, nameKey } from "./schemas";
+import { balances, cursorSeq, findGroup, insertExpense, insertGroup, listExpenses } from "./repo";
+import {
+	createExpenseSchema,
+	createGroupSchema,
+	cursorSchema,
+	fieldErrors,
+	nameKey,
+} from "./schemas";
 import { splitEqually } from "./split";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Deliberately doesn't echo the submitted name back to the client.
+const NOT_A_MEMBER = "not a member of this group";
 
 // Only routes that take a body get the limit; unmatched routes fall straight through to 404.
 const limitBody = bodyLimit({
@@ -63,13 +72,9 @@ app.post("/groups/:groupId/expenses", limitBody, async (c) => {
 	const byKey = new Map(group.members.map((m) => [nameKey(m), m]));
 	const { payer, amountCents, description, splitAmong } = body.data;
 	const unknown = [
-		...(byKey.has(nameKey(payer))
-			? []
-			: [{ path: "payer", message: `"${payer}" is not a member` }]),
+		...(byKey.has(nameKey(payer)) ? [] : [{ path: "payer", message: NOT_A_MEMBER }]),
 		...(splitAmong ?? []).flatMap((name, i) =>
-			byKey.has(nameKey(name))
-				? []
-				: [{ path: `splitAmong.${i}`, message: `"${name}" is not a member` }],
+			byKey.has(nameKey(name)) ? [] : [{ path: `splitAmong.${i}`, message: NOT_A_MEMBER }],
 		),
 	];
 	if (unknown.length > 0) return problem(c, PROBLEMS.unknownMember, unknown);
@@ -85,9 +90,25 @@ app.post("/groups/:groupId/expenses", limitBody, async (c) => {
 });
 
 app.get("/groups/:groupId/expenses", async (c) => {
+	const invalidCursor = () =>
+		problem(c, PROBLEMS.validationFailed, [
+			{ path: "cursor", message: "not a cursor issued by this API" },
+		]);
+
+	// Malformed cursors are rejected before touching D1 (400 before 404, like request bodies).
+	const raw = c.req.query("cursor");
+	if (raw !== undefined && !cursorSchema.safeParse(raw).success) return invalidCursor();
+
 	const id = c.req.param("groupId");
 	if (!(await findGroup(c.env.DB, id))) return problem(c, PROBLEMS.groupNotFound);
-	return c.json({ expenses: await listExpenses(c.env.DB, id) });
+
+	// A well-formed cursor must belong to this group.
+	let afterSeq: number | null = null;
+	if (raw !== undefined) {
+		afterSeq = await cursorSeq(c.env.DB, id, raw);
+		if (afterSeq === null) return invalidCursor();
+	}
+	return c.json(await listExpenses(c.env.DB, id, afterSeq));
 });
 
 app.get("/groups/:groupId/balances", async (c) => {

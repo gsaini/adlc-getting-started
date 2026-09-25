@@ -7,7 +7,7 @@ Every error from the Split API is an [RFC 9457](https://www.rfc-editor.org/rfc/r
   "type": "https://github.com/gsaini/adlc-getting-started/blob/main/docs/problems.md#unknown-member",
   "title": "Unknown member",
   "status": 422,
-  "errors": [{ "path": "splitAmong.1", "message": "\"Zed\" is not a member" }]
+  "errors": [{ "path": "splitAmong.1", "message": "not a member of this group" }]
 }
 ```
 

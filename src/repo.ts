@@ -1,5 +1,5 @@
 // All D1 access. Every query uses bound parameters and is bounded by a group's caps.
-import { MAX_EXPENSES_PER_GROUP, nameKey } from "./schemas";
+import { EXPENSES_PAGE_SIZE, MAX_EXPENSES_PER_GROUP, nameKey } from "./schemas";
 import type { Share } from "./split";
 
 export type Group = { id: string; name: string; members: string[]; createdAt: string };
@@ -90,25 +90,46 @@ export async function insertExpense(
 	return inserted?.meta.changes === 1 ? expense : null;
 }
 
-export async function listExpenses(db: D1Database, groupId: string): Promise<Expense[]> {
+/** Resolve a cursor (an expense ID) to its recording sequence number — only within this group. */
+export async function cursorSeq(
+	db: D1Database,
+	groupId: string,
+	expenseId: string,
+): Promise<number | null> {
+	const row = await db
+		.prepare("SELECT seq FROM expenses WHERE id = ? AND group_id = ?")
+		.bind(expenseId, groupId)
+		.first<{ seq: number }>();
+	return row?.seq ?? null;
+}
+
+/** One page of a group's expenses, newest first, plus the cursor for the next page. */
+export async function listExpenses(
+	db: D1Database,
+	groupId: string,
+	afterSeq: number | null,
+): Promise<{ expenses: Expense[]; nextCursor: string | null }> {
+	// Both statements see the same page: recording sequence below the cursor, newest first.
 	// Shares are reached through their expense (primary-key prefix), never by scanning shares.
 	const [expenseRows, shareRows] = await db.batch([
 		db
 			.prepare(
-				`SELECT e.id, m.name AS payer, e.amount_cents, e.description, e.created_at
+				`SELECT e.seq, e.id, m.name AS payer, e.amount_cents, e.description, e.created_at
 				 FROM expenses e JOIN members m ON m.group_id = e.group_id AND m.name_key = e.payer_key
-				 WHERE e.group_id = ? ORDER BY e.rowid DESC`,
+				 WHERE e.group_id = ?1 AND (?2 IS NULL OR e.seq < ?2)
+				 ORDER BY e.seq DESC LIMIT ?3`,
 			)
-			.bind(groupId),
+			.bind(groupId, afterSeq, EXPENSES_PAGE_SIZE + 1),
 		db
 			.prepare(
-				`SELECT s.expense_id, m.name AS member, s.cents
-				 FROM expenses e
-				 JOIN expense_shares s ON s.expense_id = e.id
+				`SELECT p.id AS expense_id, m.name AS member, s.cents
+				 FROM (SELECT id FROM expenses WHERE group_id = ?1 AND (?2 IS NULL OR seq < ?2)
+				       ORDER BY seq DESC LIMIT ?3) p
+				 JOIN expense_shares s ON s.expense_id = p.id
 				 JOIN members m ON m.group_id = s.group_id AND m.name_key = s.member_key
-				 WHERE e.group_id = ? ORDER BY m.position`,
+				 ORDER BY m.position`,
 			)
-			.bind(groupId),
+			.bind(groupId, afterSeq, EXPENSES_PAGE_SIZE),
 	]);
 
 	const sharesByExpense = new Map<string, Share[]>();
@@ -121,21 +142,29 @@ export async function listExpenses(db: D1Database, groupId: string): Promise<Exp
 		list.push({ member: s.member, cents: s.cents });
 		sharesByExpense.set(s.expense_id, list);
 	}
+
 	type Row = {
+		seq: number;
 		id: string;
 		payer: string;
 		amount_cents: number;
 		description: string;
 		created_at: string;
 	};
-	return ((expenseRows?.results ?? []) as Row[]).map((e) => ({
-		id: e.id,
-		payer: e.payer,
-		amountCents: e.amount_cents,
-		description: e.description,
-		createdAt: e.created_at,
-		shares: sharesByExpense.get(e.id) ?? [],
-	}));
+	const rows = (expenseRows?.results ?? []) as Row[];
+	const page = rows.slice(0, EXPENSES_PAGE_SIZE);
+	const last = page.at(-1);
+	return {
+		expenses: page.map((e) => ({
+			id: e.id,
+			payer: e.payer,
+			amountCents: e.amount_cents,
+			description: e.description,
+			createdAt: e.created_at,
+			shares: sharesByExpense.get(e.id) ?? [],
+		})),
+		nextCursor: rows.length > EXPENSES_PAGE_SIZE && last ? last.id : null,
+	};
 }
 
 export async function balances(

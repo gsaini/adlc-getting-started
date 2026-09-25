@@ -17,7 +17,9 @@ CREATE TABLE members (
 );
 
 CREATE TABLE expenses (
-	id TEXT PRIMARY KEY,
+	-- INTEGER PRIMARY KEY aliases the rowid, so recording order survives VACUUM.
+	seq INTEGER PRIMARY KEY,
+	id TEXT NOT NULL UNIQUE,
 	group_id TEXT NOT NULL REFERENCES groups (id) ON DELETE CASCADE,
 	payer_key TEXT NOT NULL,
 	amount_cents INTEGER NOT NULL CHECK (amount_cents BETWEEN 1 AND 10000000),
@@ -27,6 +29,9 @@ CREATE TABLE expenses (
 	UNIQUE (group_id, id),
 	FOREIGN KEY (group_id, payer_key) REFERENCES members (group_id, name_key)
 );
+
+-- Lists a group's expenses newest-first without a sort (seq is the rowid).
+CREATE INDEX expenses_by_group ON expenses (group_id, seq);
 
 CREATE TABLE expense_shares (
 	expense_id TEXT NOT NULL,

@@ -61,6 +61,12 @@ describe("Error responses", () => {
 			duplex: "half",
 		});
 		expect(res.status).toBe(413);
+		expect(res.headers.get("content-type")).toContain("application/problem+json");
+		expect(await res.json()).toMatchObject({
+			type: `${DOCS}#payload-too-large`,
+			title: "Payload too large",
+			status: 413,
+		});
 		expect(await countGroups()).toBe(0);
 	});
 

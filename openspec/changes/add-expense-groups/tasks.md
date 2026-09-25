@@ -25,8 +25,12 @@ Every task is test-first: write the failing test named after the spec scenario, 
 
 - [x] 5.1 Tests first for every "Show balances" scenario plus a zero-sum check after many random expenses, then `GET /groups/{id}/balances` as one aggregate query. Verify: they pass.
 
+## 5b. Paged list (added after the security review)
+
+- [x] 5b.1 Tests first for "Pages of 50" (120 expenses → 50, 50, 20; no repeats or gaps), "Exactly one full page", "Invalid cursor" (malformed, or from another group), and the updated "Newest first" and "No expenses yet", then page the list 50 at a time with an opaque, group-bound cursor. Verify: they pass, including shares on both sides of a page boundary.
+
 ## 6. Verification and security
 
 - [x] 6.1 `pnpm verify` is green: typecheck, lint, tests with coverage at or above the thresholds, and `openspec validate --all --strict`.
-- [ ] 6.2 Independent review: the `code-reviewer` subagent maps every spec scenario to its test and reviews the code. Findings and their resolutions are recorded in `verification.md`.
-- [ ] 6.3 Security review: the `security-reviewer` subagent reviews the change. Findings and their resolutions are recorded in `verification.md`. The CI security workflow (secrets, CodeQL, dependency audit) passes.
+- [x] 6.2 Independent review: the `code-reviewer` subagent maps every spec scenario to its test and reviews the code. Findings and their resolutions are recorded in `verification.md`.
+- [x] 6.3 Security review: the `security-reviewer` subagent reviews the change. Findings and their resolutions are recorded in `verification.md`. The CI security workflow (secrets, CodeQL, dependency audit) passes.

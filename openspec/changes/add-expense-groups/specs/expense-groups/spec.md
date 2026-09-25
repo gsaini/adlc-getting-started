@@ -146,15 +146,27 @@ A group SHALL hold at most 500 expenses.
 - **THEN** the response is `409` with `title` `"Expense limit reached"` and no expense is recorded
 
 ### Requirement: List expenses
-`GET /groups/{id}/expenses` SHALL return `200` with `{"expenses": [...]}`, containing the group's expense objects newest first — that is, in reverse order of recording, regardless of `createdAt` timestamps.
+`GET /groups/{id}/expenses` SHALL return `200` with `{"expenses": [...], "nextCursor": ...}`: at most 50 expense objects, newest first — in reverse order of recording, regardless of `createdAt` timestamps. When more expenses remain, `nextCursor` SHALL be an opaque string, and `GET /groups/{id}/expenses?cursor=<nextCursor>` SHALL return the next page. On the last page `nextCursor` SHALL be `null`. A malformed `cursor` SHALL be rejected with `400` `"Validation failed"` and an `errors` entry whose `path` is `"cursor"`, before the group lookup; a well-formed cursor that was not issued for this group SHALL be rejected the same way, after it. Cursors SHALL NOT reveal anything beyond the group's own expenses.
 
 #### Scenario: Newest first
 - **WHEN** a group has expenses "Taxi" then "Museum" recorded in that order, possibly within the same millisecond
-- **THEN** the response is `200` with `expenses` ordered "Museum", "Taxi", each a full expense object including `shares`
+- **THEN** the response is `200` with `expenses` ordered "Museum", "Taxi", each exactly the object returned when it was recorded, and `nextCursor` `null`
+
+#### Scenario: Pages of 50
+- **WHEN** a group has 120 expenses and a client follows `nextCursor` from the first page
+- **THEN** it receives pages of 50, 50, and 20 expenses, newest first, with no expense repeated or skipped, and the last page's `nextCursor` is `null`
+
+#### Scenario: Invalid cursor
+- **WHEN** a client sends `GET /groups/{id}/expenses?cursor=abc`, or a cursor issued for a different group
+- **THEN** the response is `400` `"Validation failed"` with an `errors` entry whose `path` is `"cursor"`
+
+#### Scenario: Exactly one full page
+- **WHEN** a group has exactly 50 expenses
+- **THEN** the first page holds all 50 and `nextCursor` is `null`
 
 #### Scenario: No expenses yet
 - **WHEN** a group has no expenses
-- **THEN** the response is `200` with `{"expenses":[]}`
+- **THEN** the response is `200` with `{"expenses":[],"nextCursor":null}`
 
 #### Scenario: Unknown group
 - **WHEN** a client sends `GET /groups/{id}/expenses` for an ID that does not exist
