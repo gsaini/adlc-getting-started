@@ -15,6 +15,8 @@ proposal, specs, design, and tasks exist and that a human has approved. If there
 - `pnpm test` — tests inside the Workers runtime against a local D1 (no network, no cost)
 - `pnpm verify` — **the definition of done**: typecheck + lint + tests with coverage thresholds + `openspec validate`
 - `pnpm dev` — local server on http://localhost:8787
+- `pnpm db:migrate:local` — apply `migrations/` to the local D1 used by `pnpm dev`
+- `pnpm tunnel` — share your local build through a free Cloudflare Quick Tunnel (acceptance testing)
 - `pnpm format` — Biome format and safe fixes
 - `pnpm spec:validate` — OpenSpec validation
 

@@ -10,7 +10,7 @@ Friends who share costs (a trip, a flat, a dinner) need one place to record who 
 - **Record an expense**: who paid, the amount in integer cents, a description, and who shares it (everyone by default). The amount is split equally, and leftover cents are assigned deterministically so shares always add up exactly.
 - **List a group's expenses**, newest first.
 - **Show balances**: each member's net position (paid minus owed), which always sums to zero.
-- Consistent error responses (`application/problem+json`) and a request-size limit.
+- Consistent error responses (`application/problem+json`, one fixed title per error), a 16,384-byte request limit, and a cap of 500 expenses per group so every query is bounded.
 - A `/health` endpoint for deploy smoke tests.
 - First D1 migration creating the tables.
 
@@ -25,6 +25,7 @@ Friends who share costs (a trip, a flat, a dinner) need one place to record who 
 ## Non-goals
 
 - Accounts, login, or access control. Anyone with a group ID can read and write it (acceptable for a demo; a later change must add auth before real use).
+- Rate limiting. Accepted risk, owned by the repository owner; see design.md, "Abuse". `add-rate-limiting` must land before real use.
 - Unequal splits (percentages, shares, exact amounts).
 - Editing or deleting expenses.
 - Settle-up suggestions (a separate change: `add-settle-up`).
