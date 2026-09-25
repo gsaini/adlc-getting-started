@@ -25,7 +25,7 @@
 				{
 					"binding": "DB",
 					"database_name": "adlc-staging",
-					"database_id": "REPLACE_WITH_STAGING_D1_ID",
+					"database_id": "f434443a-3909-4dc9-9370-fdc9cd0fa85b",
 					"migrations_dir": "migrations"
 				}
 			]
@@ -36,7 +36,7 @@
 				{
 					"binding": "DB",
 					"database_name": "adlc-production",
-					"database_id": "REPLACE_WITH_PRODUCTION_D1_ID",
+					"database_id": "6b27284d-f87c-4f13-945a-fad28015be72",
 					"migrations_dir": "migrations"
 				}
 			]
