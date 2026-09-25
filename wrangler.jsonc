@@ -1,0 +1,45 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "adlc-getting-started",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-20",
+	// Workers Logs: free plan keeps 200k events/day for 3 days.
+	"observability": { "enabled": true },
+
+	// Top level = local development and tests only (a local SQLite file, never Cloudflare).
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "adlc-local",
+			"database_id": "local",
+			"migrations_dir": "migrations"
+		}
+	],
+
+	// Real environments. `pnpm cf:setup` creates both D1 databases on your free
+	// Cloudflare account and writes their IDs over the placeholders below.
+	"env": {
+		"staging": {
+			"observability": { "enabled": true },
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "adlc-staging",
+					"database_id": "REPLACE_WITH_STAGING_D1_ID",
+					"migrations_dir": "migrations"
+				}
+			]
+		},
+		"production": {
+			"observability": { "enabled": true },
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "adlc-production",
+					"database_id": "REPLACE_WITH_PRODUCTION_D1_ID",
+					"migrations_dir": "migrations"
+				}
+			]
+		}
+	}
+}

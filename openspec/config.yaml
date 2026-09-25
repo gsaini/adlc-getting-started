@@ -1,0 +1,33 @@
+schema: spec-driven
+
+# Project context — shown to the agent whenever it writes an artifact.
+context: |
+  Product: "Split", a small expense-splitting HTTP API (groups, members, expenses, balances).
+  Runtime: Cloudflare Workers (free plan) with Hono; data in Cloudflare D1 (SQLite).
+  Language: TypeScript (strict). Validation at the HTTP boundary with zod.
+  Tests: Vitest inside the Workers runtime (@cloudflare/vitest-plugin) against a local D1.
+  Money is always integer cents — never floats.
+  Schema changes are new files in migrations/ — never edit an applied migration.
+  Free-plan budgets matter: ~10 ms CPU per request, 100k requests/day, 100k D1 row writes/day.
+
+rules:
+  proposal:
+    - Include a "Non-goals" section.
+    - Name the human approval gate and who owns it.
+  specs:
+    - Every requirement has at least one "#### Scenario:" written as WHEN/THEN.
+    - Scenarios state HTTP status codes and response shapes exactly.
+  design:
+    - Record rejected alternatives and why.
+    - State the D1 migration and whether it is backward compatible.
+  tasks:
+    - Order tasks test-first; each task is small enough for one focused agent session.
+    - End with verification tasks (pnpm verify, independent review, security review).
+
+operations:
+  apply:
+    guidance:
+      - Write the failing test first, then the code. Run `pnpm verify` before marking a task done.
+  archive:
+    guidance:
+      - Archive only after the change is merged and deployed to staging.

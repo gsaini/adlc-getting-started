@@ -1,0 +1,40 @@
+# Phase 7 — Operate. Roll production back to the previous (or a chosen) Worker version.
+# D1 migrations are forward-only; see docs/adlc/07-operate.md before rolling back a schema change.
+name: Rollback production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: "Worker version ID to roll back to (blank = the previous version)"
+        required: false
+      reason:
+        description: "Why? (recorded in the deployment message)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production # same approval gate as a release
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Inputs go through env vars, never straight into the command line (script injection).
+      - name: Roll back
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERSION_ID: ${{ inputs.version_id }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          args=(rollback)
+          if [ -n "$VERSION_ID" ]; then args+=("$VERSION_ID"); fi
+          pnpm exec wrangler "${args[@]}" --env production --message "$REASON" --yes

@@ -1,0 +1,23 @@
+# Phase 4 — Verify. The same gate the Stop hook enforces locally, run on every PR.
+name: CI
+
+on:
+  pull_request:
+  workflow_call: # reused by deploy.yml, so main is verified before every release
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # typecheck + lint + tests (in workerd, local D1) with coverage thresholds + openspec validate
+      - run: pnpm verify

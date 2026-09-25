@@ -1,0 +1,6 @@
+# pnpm 11 settings. Dependency build scripts are blocked by default — allow only
+# the native packages Wrangler needs, and nothing else.
+allowBuilds:
+  esbuild: true
+  workerd: true
+  sharp: true

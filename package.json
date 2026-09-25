@@ -1,0 +1,42 @@
+{
+	"name": "adlc-getting-started",
+	"version": "0.1.0",
+	"private": true,
+	"description": "An Agentic Development Lifecycle, end to end: spec → plan → implement → verify → secure → release, on Cloudflare's free tier.",
+	"license": "MIT",
+	"type": "module",
+	"packageManager": "pnpm@11.2.2",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"dev": "wrangler dev",
+		"cf-typegen": "wrangler types",
+		"postinstall": "wrangler types",
+		"cf:setup": "node scripts/cf-setup.mjs",
+		"tunnel": "node scripts/tunnel.mjs",
+		"smoke": "node scripts/smoke.mjs",
+		"db:migrate:local": "wrangler d1 migrations apply DB --local",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"coverage": "vitest run --coverage",
+		"typecheck": "wrangler types && tsc --noEmit && tsc --noEmit -p test",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"spec:validate": "openspec validate --all --strict",
+		"verify": "pnpm typecheck && pnpm lint && pnpm coverage && pnpm spec:validate"
+	},
+	"dependencies": {
+		"hono": "^4.13.9",
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.14",
+		"@cloudflare/vitest-plugin": "1.2.4",
+		"@fission-ai/openspec": "^1.13.2",
+		"@vitest/coverage-istanbul": "~4.1.11",
+		"typescript": "~5.9.3",
+		"vitest": "~4.1.11",
+		"wrangler": "4.137.0"
+	}
+}
