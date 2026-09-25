@@ -1,4 +1,8 @@
-import { applyD1Migrations, env } from "cloudflare:test";
+import { applyD1Migrations, env, reset } from "cloudflare:test";
+import { beforeEach } from "vitest";
 
-// Each test file gets a fresh, isolated D1; bring it to the current schema first.
-await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+// Every test starts from an empty, fully migrated local D1.
+beforeEach(async () => {
+	await reset();
+	await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+});
