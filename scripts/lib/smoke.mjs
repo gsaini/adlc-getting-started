@@ -53,6 +53,59 @@ export async function waitForHealthy({
 	}
 }
 
-export async function runSmoke() {
-	throw new Error("not implemented");
+function healthFailure(base, error) {
+	const { last, attempts } = error;
+	const seen = "error" in last ? describe(last) : `${describe(last)} ${JSON.stringify(last.json)}`;
+	return `✗ GET /health → 200 at ${base}: gave up after ${attempts} attempts, last saw ${seen}`;
+}
+
+// Only /health retries. Every later check runs once, so a real regression fails fast
+// and a flaky write never creates duplicate throwaway groups.
+export async function runSmoke({ base, readOnly, call, sleep, now, log }) {
+	const fail = (label, detail) => ({ ok: false, message: `✗ ${label} ${JSON.stringify(detail)}` });
+
+	try {
+		await waitForHealthy({
+			probe: (timeoutMs) => call("GET", "/health", undefined, timeoutMs),
+			sleep,
+			now,
+			log,
+		});
+	} catch (error) {
+		if (!(error instanceof HealthCheckError)) throw error;
+		return { ok: false, message: healthFailure(base, error) };
+	}
+	log("✓ GET /health → 200");
+
+	if (readOnly) {
+		log(`\nRead-only smoke check passed against ${base}`);
+		return { ok: true };
+	}
+
+	const group = await call("POST", "/groups", {
+		name: "Smoke test",
+		members: ["Asha", "Ben", "Chen"],
+	});
+	if (!(group.status === 201 && group.json?.id)) return fail("POST /groups → 201", group);
+	log("✓ POST /groups → 201");
+
+	const id = group.json.id;
+	const expense = await call("POST", `/groups/${id}/expenses`, {
+		payer: "Asha",
+		amountCents: 1000,
+		description: "Smoke-test coffee",
+	});
+	const shares = expense.json?.shares?.map((s) => s.cents);
+	const label = "POST expense → 201 with shares 334/333/333";
+	if (!(expense.status === 201 && `${shares}` === "334,333,333")) return fail(label, expense);
+	log(`✓ ${label}`);
+
+	const balances = await call("GET", `/groups/${id}/balances`);
+	const sum = balances.json?.balances?.reduce((total, b) => total + b.netCents, 0);
+	const balanceLabel = "GET balances → 200, summing to zero";
+	if (!(balances.status === 200 && sum === 0)) return fail(balanceLabel, balances);
+	log(`✓ ${balanceLabel}`);
+
+	log(`\nAll smoke checks passed against ${base}`);
+	return { ok: true };
 }
