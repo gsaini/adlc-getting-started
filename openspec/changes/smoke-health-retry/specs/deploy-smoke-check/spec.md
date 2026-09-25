@@ -7,7 +7,7 @@ The post-deploy smoke check that CI runs against staging (full flow) and product
 ### Requirement: Health check waits for a newly deployed Worker
 The smoke check SHALL retry `GET /health` until it returns HTTP 200 with a JSON body whose `status` is `"ok"`, or until 30 seconds have passed since the first attempt, whichever comes first.
 - A non-200 status, a 200 whose body is not `{"status":"ok"}`, a network error, and an attempt that times out each count as not healthy yet.
-- Each attempt SHALL be aborted after 5 seconds, or at the 30-second deadline if that comes sooner, so the whole check ends within 30 seconds plus normal process overhead.
+- Each attempt SHALL be aborted after 5 seconds, or at the 30-second deadline if that comes sooner. The final attempt, made at the deadline, SHALL get 1 second, so the whole check ends within about 31 seconds plus normal process overhead.
 - The waits between attempts SHALL be 500, 1000, 2000, 4000 ms, then 5000 ms each after that. A wait that would pass the deadline is cut short to end at the deadline, and one final attempt is made there.
 - Each failed attempt SHALL log one line to stdout: `health attempt <n>: <observation>, retrying in <ms> ms`. `<observation>` is `status <code>` for an HTTP response, or `error <message>` for a network error or timeout.
 

@@ -23,13 +23,13 @@ See proposal.md for why the change is needed and specs/deploy-smoke-check for th
 ### The logic moves into `scripts/lib/smoke.mjs`, with a typed `scripts/lib/smoke.d.mts`
 The module exports two functions:
 - `waitForHealthy({ probe, sleep, now, log, timeoutMs = 30_000, attemptTimeoutMs = 5_000 })`
-  - `probe(signal)` returns `{ status, json }` or throws.
+  - `probe(timeoutMs)` returns `{ status, json }` or throws.
   - It resolves with the healthy result. Otherwise it rejects with an error that carries the last observation: `{ status, json }` or the error.
-- `runSmoke({ base, readOnly, call, waitForHealthy, log })`
-  - It runs the health wait and then the single-shot flow.
+- `runSmoke({ base, readOnly, call, sleep, now, log })`
+  - It runs the health wait (probing through `call`) and then the single-shot flow.
   - It returns `{ ok: true }`, or `{ ok: false, message }` for the first failed check.
 
-`smoke.mjs` stays a thin wrapper. It parses argv, checks the base URL with `new URL()` (and exits 1 at once if it's invalid), and wires in real `fetch`, `setTimeout`, `Date.now` and `AbortSignal.timeout`. It prints failures to stderr and sets the exit code. `runSmoke` never calls `process.exit`, so tests can assert on how many requests were made.
+`smoke.mjs` stays a thin wrapper. It parses argv, checks the base URL with `new URL()` (and exits 1 at once if it's invalid), and wires in real `fetch`, `setTimeout`, `Date.now` and `AbortSignal.timeout`. It prints the failure message `runSmoke` returns to stderr and sets the exit code. `runSmoke` never calls `process.exit`, so tests can assert on how many requests were made.
 
 The hand-written `.d.mts` gives `tsc` a strict type for the test imports.
 - *Rejected: `allowJs` + `checkJs` in `test/tsconfig.json`.* It widens typecheck to every script, which is scope creep for this change.
@@ -37,8 +37,8 @@ The hand-written `.d.mts` gives `tsc` a strict type for the test imports.
 - *Rejected: inlining the loop in `smoke.mjs`.* Tests could only reach it by spawning the script against a live server.
 - *Rejected: vitest fake timers around real `fetch`.* It's harder to follow in the Workers pool, and still needs a server.
 
-### Per-attempt timeout: `min(5000, remaining)` via `AbortSignal`
-Without it, one stalled `fetch` (undici waits up to 300 s for headers) breaks the 30 s bound. An abort counts as a network error and is retried like one. The wrapper passes `AbortSignal.timeout(ms)`. Tests pass a fake signal and a probe that rejects when it fires.
+### Per-attempt timeout: `max(min(5000, remaining), 1000)` via `AbortSignal`
+Without it, one stalled `fetch` (undici waits up to 300 s for headers) breaks the 30 s bound. An abort counts as a network error and is retried like one. The 1 s floor is only for the final attempt at the deadline, which would otherwise get zero time, so the check ends by about 31 s. `waitForHealthy` hands the budget to `probe(timeoutMs)`, and the wrapper turns it into `AbortSignal.timeout(timeoutMs)`. Tests use a probe that advances the fake clock by `timeoutMs` and rejects with a `TimeoutError`.
 
 ### Backoff: 500 ms doubling, capped at 5 s, deadline 30 s, final attempt at the deadline
 Attempts come at 0, 0.5, 1.5, 3.5, 7.5, 12.5, 17.5, 22.5, 27.5 and 30 s, 10 in total. A new `workers.dev` address was reachable within a couple of seconds in run 36137173585, so the first attempts come fast. 30 s leaves plenty of slack and stays well under the job timeout.
