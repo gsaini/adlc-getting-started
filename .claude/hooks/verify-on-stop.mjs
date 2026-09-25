@@ -7,21 +7,16 @@ const input = JSON.parse(readFileSync(0, "utf8"));
 // Already continuing because of this hook: let Claude stop rather than loop forever.
 if (input.stop_hook_active) process.exit(0);
 
-// Nothing changed in code, tests, migrations, or specs: nothing to verify.
-const status = spawnSync(
-	"git",
-	["status", "--porcelain", "--", "src", "test", "migrations", "openspec"],
-	{
-		cwd: process.env.CLAUDE_PROJECT_DIR,
-		encoding: "utf8",
-	},
-);
-if (status.stdout.trim() === "") process.exit(0);
+// Skip only when every change is documentation. Config, scripts, workflows, and
+// guardrails count as code: they can weaken the gate just as surely as src/ can.
+const cwd = process.env.CLAUDE_PROJECT_DIR;
+const changed = spawnSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" })
+	.stdout.split("\n")
+	.map((line) => line.slice(3).trim())
+	.filter(Boolean);
+if (changed.every((path) => path.startsWith("docs/") || path.endsWith(".md"))) process.exit(0);
 
-const verify = spawnSync("pnpm", ["verify"], {
-	cwd: process.env.CLAUDE_PROJECT_DIR,
-	encoding: "utf8",
-});
+const verify = spawnSync("pnpm", ["verify"], { cwd, encoding: "utf8" });
 if (verify.status !== 0) {
 	const tail = `${verify.stdout}${verify.stderr}`.trim().split("\n").slice(-60).join("\n");
 	process.stdout.write(

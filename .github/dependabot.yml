@@ -1,0 +1,11 @@
+# Keeps the SHA-pinned actions current: Dependabot opens a PR, and the PR goes
+# through the same CI, security, and human review as any other change.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

@@ -1,0 +1,19 @@
+# The rails the agent runs on. With branch protection's "Require review from Code
+# Owners", a change to any of these needs the owner's approval — even if an agent
+# wrote it. See docs/adlc/00-prepare.md.
+/.claude/              @gsaini
+/.github/              @gsaini
+/CLAUDE.md             @gsaini
+/package.json          @gsaini
+/pnpm-lock.yaml        @gsaini
+/pnpm-workspace.yaml   @gsaini
+/vitest.config.*       @gsaini
+/vite.config.*         @gsaini
+/.npmrc                @gsaini
+/test/tsconfig.json    @gsaini
+/biome.json            @gsaini
+/tsconfig.json         @gsaini
+/wrangler.jsonc        @gsaini
+/scripts/              @gsaini
+/migrations/           @gsaini
+/openspec/config.yaml  @gsaini

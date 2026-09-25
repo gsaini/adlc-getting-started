@@ -49,6 +49,10 @@ console.log(`
 wrangler.jsonc now points at your databases. Next:
   1. Commit wrangler.jsonc (database IDs are not secrets).
   2. Create an API token: Cloudflare dashboard → My Profile → API Tokens → "Edit Cloudflare Workers"
-     template, plus Account → D1 → Edit.
-  3. Add GitHub repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
-  4. Push to main: CI deploys to staging, then waits for approval before production.`);
+     template, plus Account → D1 → Edit. Limit it to this account.
+  3. In GitHub → Settings → Environments, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as
+     ENVIRONMENT secrets on both "staging" and "production" — not as repository secrets, so only an
+     approved production job can ever read the production credentials.
+  4. Log Wrangler out on this machine, so no coding agent running here can deploy:
+       pnpm exec wrangler logout
+  5. Push to main: CI deploys to staging, then waits for approval before production.`);

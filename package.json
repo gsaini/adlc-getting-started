@@ -17,6 +17,7 @@
 		"tunnel": "node scripts/tunnel.mjs",
 		"smoke": "node scripts/smoke.mjs",
 		"db:migrate:local": "wrangler d1 migrations apply DB --local",
+		"db:reset:local": "node scripts/db-reset-local.mjs",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"coverage": "vitest run --coverage",

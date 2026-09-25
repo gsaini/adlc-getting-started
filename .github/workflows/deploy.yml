@@ -1,6 +1,11 @@
 # Phase 6 — Release. main → verify → staging (automatic) → production (human approval).
-# Runs only once Cloudflare is configured: `pnpm cf:setup` + CLOUDFLARE_API_TOKEN and
-# CLOUDFLARE_ACCOUNT_ID repo secrets. Until then it skips with a notice.
+#
+# Cloudflare credentials are ENVIRONMENT secrets (CLOUDFLARE_API_TOKEN and
+# CLOUDFLARE_ACCOUNT_ID on both the `staging` and `production` environments),
+# never repository secrets: only jobs that run in an environment can read its
+# secrets, so production credentials are released only after a reviewer approves.
+# Both environments allow deployments from `main` only. Until Cloudflare is set up
+# (`pnpm cf:setup` + the secrets), the jobs skip with a notice instead of failing.
 name: Deploy
 
 on:
@@ -17,21 +22,26 @@ permissions:
 
 jobs:
   verify:
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/ci.yml
 
-  ready:
-    name: Cloudflare configured?
+  staging:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.deployment-url }}
     outputs:
-      enabled: ${{ steps.check.outputs.enabled }}
+      deployed: ${{ steps.ready.outputs.enabled }}
     env:
-      HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+      HAS_SECRETS: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
     steps:
       - uses: actions/checkout@v7
-      - id: check
+      - id: ready
         run: |
-          if [ "$HAS_TOKEN" != "true" ]; then
-            echo "::notice::Deploy skipped — add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repo secrets."
+          if [ "$HAS_SECRETS" != "true" ]; then
+            echo "::notice::Deploy skipped — add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as secrets of the 'staging' and 'production' environments."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           elif grep -q REPLACE_WITH_ wrangler.jsonc; then
             echo "::notice::Deploy skipped — run 'pnpm cf:setup' and commit wrangler.jsonc."
@@ -39,24 +49,18 @@ jobs:
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
-
-  staging:
-    needs: [verify, ready]
-    if: needs.ready.outputs.enabled == 'true'
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: ${{ steps.deploy.outputs.deployment-url }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - if: steps.ready.outputs.enabled == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0 (pnpm version from "packageManager")
+      - if: steps.ready.outputs.enabled == 'true'
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - id: deploy
-        uses: cloudflare/wrangler-action@v4
+      - if: steps.ready.outputs.enabled == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.ready.outputs.enabled == 'true'
+        id: deploy
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -64,27 +68,31 @@ jobs:
           command: |
             d1 migrations apply DB --remote --env staging
             deploy --env staging
-      - name: Smoke test (full flow, throwaway data)
-        run: node scripts/smoke.mjs "${{ steps.deploy.outputs.deployment-url }}"
+      - if: steps.ready.outputs.enabled == 'true'
+        name: Smoke test (full flow, throwaway data)
+        env:
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: node scripts/smoke.mjs "$URL"
 
   production:
     needs: staging
+    if: needs.staging.outputs.deployed == 'true'
     runs-on: ubuntu-latest
-    # The human gate: configure required reviewers on the "production" environment
-    # (Settings → Environments). The job waits here until someone approves.
+    # The human gate: required reviewers on the `production` environment.
+    # The job — and its secrets — wait here until someone approves.
     environment:
       name: production
       url: ${{ steps.deploy.outputs.deployment-url }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0 (pnpm version from "packageManager")
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - id: deploy
-        uses: cloudflare/wrangler-action@v4
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -93,4 +101,6 @@ jobs:
             d1 migrations apply DB --remote --env production
             deploy --env production
       - name: Smoke test (read-only in production)
-        run: node scripts/smoke.mjs "${{ steps.deploy.outputs.deployment-url }}" --read-only
+        env:
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: node scripts/smoke.mjs "$URL" --read-only
