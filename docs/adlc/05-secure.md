@@ -22,6 +22,10 @@
 - Anything that could burn the free plan's daily CPU, request, or D1 write budget.
 - CI least privilege: `permissions:` blocks, secrets only in jobs that need them, and **no workflow inputs interpolated into shell commands** (the rollback workflow passes them through environment variables).
 
+## What the security review found here
+
+The first review of this repo passed the application code and failed the **delivery machinery**: repository-level deploy secrets that any pushed workflow could use, scripts that allow-listed commands would run after an agent edited them, a guard hook that quote-splitting could dodge, an agent able to edit its own guardrails, and a read-amplification path that could spend the free plan's daily D1 read budget. All of it is fixed or explicitly accepted; the log is in [`verification.md`](../../openspec/changes/add-expense-groups/verification.md). The lesson generalizes: with agents, review the rails as hard as the code.
+
 ## Accepting a risk is a decision, not a shrug
 
 `add-expense-groups` ships without rate limiting. That is written in `design.md` with the impact (the daily write budget can be exhausted), the owner (the repo owner), the reason, and the follow-up change required before real use. If you can't name an owner, the risk isn't accepted — it's ignored.

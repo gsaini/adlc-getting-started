@@ -17,7 +17,7 @@ Then run the independent critique:
 
 ## What happened in this repo
 
-The first review of `add-expense-groups` came back **REVISE**: 1 blocker (an empty `splitAmong` list would divide by zero), 7 major findings (missing response shapes and error paths, case-sensitivity, an unbounded query, write-budget abuse), and 5 minor ones. Every finding and its resolution is in [`verification.md`](../../openspec/changes/archive/2026-09-25-add-expense-groups/verification.md). Fixing them in the plan took minutes; finding them in code review — or production — would not have.
+The first review of `add-expense-groups` came back **REVISE**: 1 blocker (an empty `splitAmong` list would divide by zero), 7 major findings (missing response shapes and error paths, case-sensitivity, an unbounded query, write-budget abuse), and 5 minor ones. Every finding and its resolution is in [`verification.md`](../../openspec/changes/add-expense-groups/verification.md). Fixing them in the plan took minutes; finding them in code review — or production — would not have.
 
 One finding was **not** fixed but **accepted**: no rate limiting in the first slice. The design names the risk, the owner, the reason, and the follow-up change that must land before real use. An explicit, owned risk is a legitimate outcome of review; a silent one is not.
 

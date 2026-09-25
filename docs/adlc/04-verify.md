@@ -23,7 +23,7 @@ Findings and resolutions go into the change's `verification.md`, next to the pla
 
 ## Why a separate reviewer works
 
-The implementing agent has already rationalized every decision it made. A fresh reviewer with a checklist, no edit tools, and the spec as its reference reads the code the way a stranger would. In this repo that caught real issues — see [`verification.md`](../../openspec/changes/archive/2026-09-25-add-expense-groups/verification.md).
+The implementing agent has already rationalized every decision it made. A fresh reviewer with a checklist, no edit tools, and the spec as its reference reads the code the way a stranger would. In this repo that caught real issues — see [`verification.md`](../../openspec/changes/add-expense-groups/verification.md).
 
 ## Exit gate
 

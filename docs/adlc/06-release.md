@@ -25,6 +25,7 @@ Reviewers (or a product owner) can try a change **before it exists anywhere but 
 ```bash
 pnpm tunnel            # wrangler dev + a Cloudflare Quick Tunnel → https://<random>.trycloudflare.com
 pnpm tunnel --smoke    # …and run the end-to-end smoke test through the public URL
+                       # (the tunnel shuts itself down after 30 minutes; --minutes N to change)
 ```
 
 A **Quick Tunnel** is free and needs no Cloudflare account, no domain, and no open inbound ports: `cloudflared` makes an outbound connection to Cloudflare, which proxies the random URL to `localhost:8787`. It's ideal for a 20-minute acceptance session. Details, limits, and the step up to named tunnels with Cloudflare Access are in [Cloudflare setup](../cloudflare.md#cloudflare-tunnel).
@@ -45,7 +46,7 @@ If an `ANTHROPIC_API_KEY` secret is set, [`claude-review.yml`](../../.github/wor
 - **staging** — applies new D1 migrations to the staging database, deploys the `staging` Worker, and runs the full smoke test (throwaway data).
 - **production** — waits for approval by a required reviewer on the `production` GitHub environment, then migrates, deploys, and runs a **read-only** smoke test.
 
-Everything runs on Cloudflare's free plan. Until you run `pnpm cf:setup` and add the two secrets, the deploy jobs skip with a notice instead of failing. See [Cloudflare setup](../cloudflare.md).
+Everything runs on Cloudflare's free plan. The Cloudflare credentials are **environment** secrets on `staging` and `production`, not repository secrets: the production token is only released to a job after a reviewer approves it. Until you run `pnpm cf:setup` and add the secrets, the deploy jobs skip with a notice instead of failing. See [Cloudflare setup](../cloudflare.md).
 
 ## 4. Archive
 

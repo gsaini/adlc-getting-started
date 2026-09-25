@@ -8,7 +8,7 @@
 |-------------------------|-------|---------------------|
 | Requests | 100,000 / day | every API call |
 | CPU per request | 10 ms | balances query; bounded by the 500-expense cap |
-| D1 rows written | 100,000 / day (resets 00:00 UTC) | worst case ~43 rows per expense, ~42 per group |
+| D1 rows written | 100,000 / day (resets 00:00 UTC) | worst case ~44 rows per expense, ~42 per group |
 | D1 rows read | 5,000,000 / day | listing and balances |
 | D1 storage | 5 GB total | small |
 | Workers Logs | 200,000 events / day, kept 3 days | `observability.enabled` in `wrangler.jsonc` |
@@ -41,7 +41,7 @@ After each change (or incident), hold a short retro and turn every lesson into a
 git log --format='%(trailers:key=Co-Authored-By,valueonly)' | grep -c . ; git rev-list --count HEAD
 
 # Findings caught before merge (plan + code + security reviews)
-grep -c '^| [0-9]' openspec/changes/archive/*/verification.md
+grep -c '^| [0-9N]' openspec/changes/*/verification.md openspec/changes/archive/*/verification.md
 ```
 
 Track lead time (proposal → production), findings caught per phase, and escaped defects (bugs found after release). If escaped defects rise, move effort earlier: tighter scenarios, stricter reviewers.
