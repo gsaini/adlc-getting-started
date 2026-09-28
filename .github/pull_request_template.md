@@ -10,6 +10,7 @@ OpenSpec change: `openspec/changes/<name>/` <!-- link the proposal -->
 
 ## Verification (the reviewer checks these, not the author)
 
+- [ ] A reviewer other than the PR author approved after the latest push; required Code Owner reviews and all review threads are resolved
 - [ ] CI green: `pnpm verify` (typecheck, lint, coverage thresholds, openspec validate)
 - [ ] Security workflow green (gitleaks, CodeQL, dependency audit)
 - [ ] `code-reviewer` and `security-reviewer` findings are recorded in the change's `verification.md` and resolved or accepted

@@ -36,7 +36,9 @@ The **controls** — the things that hold even if every tripwire is bypassed —
 | `staging` and `production` accept deployments from `main` only; `production` needs a reviewer | GitHub → Settings → Environments |
 | `main` accepts changes only by reviewed pull request | GitHub → Settings → Rules (below) |
 
-**Recommended branch ruleset for `main`:** require a pull request with 1 approval and *review from Code Owners*, require the `CI` and `Security` checks to pass, block force pushes and deletions. Then a change to the rails (`CODEOWNERS` paths) always needs your review — even when an agent wrote it.
+**Enforced branch ruleset for `main` (`main: ADLC gates`):** require a pull request and one approval; changes to paths owned in `CODEOWNERS` also need a Code Owner approval. The approval must be after the latest push, and review threads must be resolved. The `verify` job plus the gitleaks, CodeQL, dependency audit, and dependency review checks must pass. Stale approvals are dismissed; force pushes and branch deletion are blocked; there are no bypass actors.
+
+These settings live in GitHub and are not versioned with the repo. When forking, recreate the ruleset under **Settings → Rules → Rulesets** and confirm its enforcement is active. This repository currently has one collaborator, so owner-authored PRs need another collaborator to approve and merge them. Add a second reviewer before enabling the same no-self-approval rule on the production environment.
 
 ## Exit gate
 
