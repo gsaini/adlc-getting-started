@@ -129,7 +129,7 @@ Errors are RFC 9457 problem details: [docs/problems.md](docs/problems.md).
 
 - **Archive `add-expense-groups`** — after your first staging deploy, per [`openspec/config.yaml`](openspec/config.yaml).
 - **Rate limiting and auth** — the design records them as an owned, accepted risk; both are required before real use.
-- **Branch ruleset on `main`** — recommended in [00-prepare](docs/adlc/00-prepare.md#tripwires-versus-controls); it changes how you push, so it's your call.
+- **GitHub settings are not part of a fork** — this repo enforces the `main: ADLC gates` ruleset; recreate it when forking as described in [00-prepare](docs/adlc/00-prepare.md#tripwires-versus-controls). With one collaborator, owner-authored PRs require a second collaborator to approve them.
 
 ## License
 
