@@ -24,7 +24,7 @@
 
 ## What the security review found here
 
-The first review of this repo passed the application code and failed the **delivery machinery**: repository-level deploy secrets that any pushed workflow could use, scripts that allow-listed commands would run after an agent edited them, a guard hook that quote-splitting could dodge, an agent able to edit its own guardrails, and a read-amplification path that could spend the free plan's daily D1 read budget. All of it is fixed or explicitly accepted; the log is in [`verification.md`](../../openspec/changes/add-expense-groups/verification.md). The lesson generalizes: with agents, review the rails as hard as the code.
+The first review of this repo passed the application code and failed the **delivery machinery**: repository-level deploy secrets that any pushed workflow could use, scripts that allow-listed commands would run after an agent edited them, a guard hook that quote-splitting could dodge, an agent able to edit its own guardrails, and a read-amplification path that could spend the free plan's daily D1 read budget. All of it is fixed or explicitly accepted; the log is in [`verification.md`](../../openspec/changes/archive/2026-09-26-add-expense-groups/verification.md). The lesson generalizes: with agents, review the rails as hard as the code.
 
 ## Accepting a risk is a decision, not a shrug
 
