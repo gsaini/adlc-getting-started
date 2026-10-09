@@ -42,17 +42,17 @@ This repo is a working template of that process, not a diagram of it. A small re
 | Phase | Guide | In this repo |
 |-------|-------|--------------|
 | 0. Prepare | [00-prepare](docs/adlc/00-prepare.md) | [`CLAUDE.md`](CLAUDE.md), [`.claude/settings.json`](.claude/settings.json), [hooks](.claude/hooks/), [reviewer agents](.claude/agents/), [CODEOWNERS](.github/CODEOWNERS) |
-| 1. Specify | [01-specify](docs/adlc/01-specify.md) | [proposal](openspec/changes/add-expense-groups/proposal.md), [spec — 7 requirements, 34 scenarios](openspec/changes/add-expense-groups/specs/expense-groups/spec.md) |
-| 2. Plan | [02-plan](docs/adlc/02-plan.md) | [design](openspec/changes/add-expense-groups/design.md), [tasks](openspec/changes/add-expense-groups/tasks.md) |
+| 1. Specify | [01-specify](docs/adlc/01-specify.md) | [proposal](openspec/changes/archive/2026-09-26-add-expense-groups/proposal.md), [spec — 7 requirements, 34 scenarios](openspec/specs/expense-groups/spec.md) |
+| 2. Plan | [02-plan](docs/adlc/02-plan.md) | [design](openspec/changes/archive/2026-09-26-add-expense-groups/design.md), [tasks](openspec/changes/archive/2026-09-26-add-expense-groups/tasks.md) |
 | 3. Implement | [03-implement](docs/adlc/03-implement.md) | [`src/`](src/), [`test/`](test/), [`migrations/`](migrations/) |
-| 4. Verify | [04-verify](docs/adlc/04-verify.md) | [`ci.yml`](.github/workflows/ci.yml), [verification log](openspec/changes/add-expense-groups/verification.md) |
+| 4. Verify | [04-verify](docs/adlc/04-verify.md) | [`ci.yml`](.github/workflows/ci.yml), [verification log](openspec/changes/archive/2026-09-26-add-expense-groups/verification.md) |
 | 5. Secure | [05-secure](docs/adlc/05-secure.md) | [`security.yml`](.github/workflows/security.yml), same log |
 | 6. Release | [06-release](docs/adlc/06-release.md) | [`pnpm tunnel`](scripts/tunnel.mjs), [`deploy.yml`](.github/workflows/deploy.yml), [PR template](.github/pull_request_template.md) |
 | 7. Operate | [07-operate](docs/adlc/07-operate.md) | [`rollback.yml`](.github/workflows/rollback.yml), Workers Logs |
 
 ## The case study: what actually happened
 
-The app is **Split**, a small expense-splitting API: groups, members, expenses split to the cent, balances, and a paged expense list. It runs on Cloudflare Workers with D1. Built by Claude Code, reviewed by read-only agents, with the numbers from the [verification log](openspec/changes/add-expense-groups/verification.md):
+The app is **Split**, a small expense-splitting API: groups, members, expenses split to the cent, balances, and a paged expense list. It runs on Cloudflare Workers with D1. Built by Claude Code, reviewed by read-only agents, with the numbers from the [verification log](openspec/changes/archive/2026-09-26-add-expense-groups/verification.md):
 
 | Gate | Result | What it caught |
 |------|--------|----------------|
@@ -110,8 +110,6 @@ pnpm tunnel --smoke                                               # 6. acceptanc
 /opsx:archive add-settle-up                                       #    the spec becomes the source of truth
 ```
 
-After your first staging deploy passes, also run `/opsx:archive add-expense-groups` — the last step of the case study.
-
 ## The API
 
 | Method | Path | Returns |
@@ -127,7 +125,6 @@ Errors are RFC 9457 problem details: [docs/problems.md](docs/problems.md).
 
 ## What's deliberately not done
 
-- **Archive `add-expense-groups`** — after your first staging deploy, per [`openspec/config.yaml`](openspec/config.yaml).
 - **Rate limiting and auth** — the design records them as an owned, accepted risk; both are required before real use.
 - **GitHub settings are not part of a fork** — this repo enforces the `main: ADLC gates` ruleset; recreate it when forking as described in [00-prepare](docs/adlc/00-prepare.md#tripwires-versus-controls). With one collaborator, owner-authored PRs require a second collaborator to approve them.
 

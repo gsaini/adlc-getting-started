@@ -45,7 +45,7 @@ Code generation got cheap. What stayed expensive is knowing **what** to build, k
 
 ## Try a full change yourself
 
-The repo ships with one change taken through every phase ([`add-expense-groups`](../../openspec/changes/add-expense-groups/) — its last step, archiving once your first staging deploy passes, is yours) and one waiting for you to build ([`add-settle-up`](../../openspec/changes/add-settle-up/)). In Claude Code:
+The repo ships with one change taken through every phase ([`add-expense-groups`](../../openspec/changes/archive/2026-09-26-add-expense-groups/), now archived; its spec lives on in [`openspec/specs/expense-groups`](../../openspec/specs/expense-groups/spec.md)) and one waiting for you to build ([`add-settle-up`](../../openspec/changes/add-settle-up/)). In Claude Code:
 
 ```text
 /opsx:apply add-settle-up          # phase 3 — the agent implements, test-first
